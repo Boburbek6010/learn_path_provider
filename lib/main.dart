@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learn_path_provider/screens/home_screen.dart';
+import 'package:learn_path_provider/screens/profile_screen.dart';
 
 void main(){
   runApp(const App());
@@ -12,7 +13,7 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomeScreen(),
+      home: ProfileScreen(),
     );
   }
 }

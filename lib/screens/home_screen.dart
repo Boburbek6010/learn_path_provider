@@ -1,12 +1,10 @@
-import 'dart:developer';
-// import 'dart:html';
 import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:learn_path_provider/main.dart';
 import 'package:path_provider/path_provider.dart';
+
+import '../functions/custom_dialog.dart';
+import '../functions/custom_main_builder.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late bool isData;
 
   @override
-  initState(){
+  initState() {
     fileNameController = TextEditingController();
     bodyController = TextEditingController();
     list = [];
@@ -40,22 +38,21 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
   }
 
-
   @override
-  dispose(){
+  dispose() {
     fileNameController.dispose();
     bodyController.dispose();
     super.dispose();
   }
 
-  Future<String> getLocation()async{
+  Future<String> getLocation() async {
     directory = await getTemporaryDirectory();
     return directory.path;
   }
 
-  Future<void> createFile({required String fileName, required String text})async{
+  Future<void> createFile({required String fileName, required String text}) async {
     final path = await getLocation();
-    file = File("$path/$fileName-${DateTime.now().toIso8601String()}.txt");
+    file = File("$path/$fileName-${DateTime.now().toIso8601String().substring(0, 12)}.txt");
     await file.writeAsString(text);
     fileNameController.clear();
     bodyController.clear();
@@ -63,22 +60,20 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {});
   }
 
-
-  Future<void> getAllFiles()async{
+  Future<void> getAllFiles() async {
     list = [];
     isLoading = false;
     setState(() {});
     await getLocation();
     Stream<FileSystemEntity> files = directory.list();
     files.listen((event) {
-      if(event.path.endsWith('.txt')){
+      if (event.path.endsWith('.txt')) {
         list.add(event.path);
       }
     });
     isLoading = true;
     setState(() {});
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -89,160 +84,82 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           Switch(
             value: isAndroid,
-            onChanged: (_){
+            onChanged: (_) {
               isAndroid = !isAndroid;
               setState(() {});
             },
           ),
-          const SizedBox(width: 10,),
+          const SizedBox(
+            width: 10,
+          ),
         ],
       ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              SizedBox(
-                height: 100,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    MaterialButton(
-                      onPressed: ()async{
-                        isCache = true;
-                        isData = false;
-                        directory = await getTemporaryDirectory();
-                        setState(() {});
-                      },
-                      color: isCache ?Colors.blue:Colors.grey,
-                      child: const Text("Cache"),
-                    ),
-                    const SizedBox(width: 30,),
-                    MaterialButton(
-                      onPressed: ()async{
-                        isCache = false;
-                        isData = true;
-                        directory = await getApplicationDocumentsDirectory();
-                        setState(() {});
-                      },
-                      color: isData ?Colors.blue:Colors.grey,
-                      child: const Text("Data"),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: isLoading ?ListView.builder(
-                  itemBuilder: (_, index){
-                    return Card(
-                      child: ListTile(
-                        title: Text(list[index]),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 100,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      MaterialButton(
+                        onPressed: () async {
+                          isCache = true;
+                          isData = false;
+                          directory = await getTemporaryDirectory();
+                          setState(() {});
+                        },
+                        color: isCache ? Colors.blue : Colors.grey,
+                        child: const Text("Cache"),
                       ),
-                    );
-                  },
-                  itemCount: list.length,
-                ):const Center(
-                  child: CircularProgressIndicator(),
+                      const SizedBox(
+                        width: 30,
+                      ),
+                      MaterialButton(
+                        onPressed: () async {
+                          isCache = false;
+                          isData = true;
+                          directory = await getApplicationDocumentsDirectory();
+                          setState(() {});
+                        },
+                        color: isData ? Colors.blue : Colors.grey,
+                        child: const Text("Data"),
+                      ),
+                    ],
+                  ),
                 ),
-              )
-            ],
-          )
+                customMainBuilder(
+                  isLoading: isLoading,
+                  list: list,
+                )
+              ],
+            ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: ()async{
+        onPressed: () async {
           showDialog(
             context: context,
-            builder: (context){
+            builder: (context) {
               return customDialog(
                 context: context,
                 isPlatform: isAndroid,
                 fileNameController: fileNameController,
                 bodyController: bodyController,
-                onCancelPressed: (){
+                onCancelPressed: () {
                   Navigator.pop(context);
                 },
-                onCreatePressed: ()async{
-
+                onCreatePressed: () async {
                   await createFile(fileName: fileNameController.text.trim().toLowerCase(), text: bodyController.text);
-
                   Navigator.pop(context);
-                }
+                },
               );
-            }
+            },
           );
         },
       ),
     );
   }
-}
-
-Widget customDialog({required bool isPlatform, required void Function()? onCancelPressed, required void Function()? onCreatePressed, required BuildContext context, required TextEditingController fileNameController, required TextEditingController bodyController}){
-  return isPlatform
-      ?AlertDialog(
-    title: const Text("Create a file"),
-    content: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TextField(
-          controller: fileNameController,
-          decoration: const InputDecoration(
-              hintText: "File name"
-          ),
-        ),
-        TextField(
-          controller: bodyController,
-          decoration: const InputDecoration(
-              hintText: "Text"
-          ),
-        ),
-      ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: onCancelPressed,
-        child: const Text("Cancel"),
-      ),
-      TextButton(
-        onPressed: onCreatePressed,
-        child: const Text("Create"),
-      )
-    ],
-  )
-      :CupertinoAlertDialog(
-          title: const Text("Create a file"),
-          content: Card(
-            color: Colors.transparent,
-            elevation: 0.0,
-            child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-            controller: fileNameController,
-            decoration: const InputDecoration(
-                hintText: "File name"
-            ),
-                    ),
-                    TextField(
-            controller: bodyController,
-            decoration: const InputDecoration(
-                hintText: "Text"
-            ),
-                    ),
-                  ],
-            ),
-          ),
-          actions: [
-      CupertinoDialogAction(
-        onPressed: onCancelPressed,
-        child: const Text("Cancel"),
-      ),
-      CupertinoDialogAction(
-        onPressed: onCreatePressed,
-        child: const Text("Create"),
-      )
-          ],
-        );
 }
